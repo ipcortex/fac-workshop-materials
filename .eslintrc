@@ -1,0 +1,29 @@
+{
+  "env": {
+    "browser": true,
+    "es6": true,
+    "node": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 6,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "experimentalObjectRestSpread": true,
+      "jsx": true,
+      "impliedStrict": true,
+      "modules": true
+    }
+  },
+  "rules": {
+    "indent": [ 1, 2 ],
+    "semi": [ 1, "always"],
+    "key-spacing": [2, { "beforeColon": false, "afterColon": true, "mode": "strict" }],
+    "no-unused-vars": [1, { "vars": "local", "args": "after-used" }],
+    "no-shadow": [2, { "builtinGlobals": true, "allow": ["_", "__", "done", "cb", "resolve", "reject"] }],
+    "comma-dangle": [2, "only-multiline"],
+    "no-undef": 2,
+    "no-multi-spaces": [2, {exceptions: {VariableDeclarator: true}}],
+    "no-unused-expressions": 2,
+    "no-multiple-empty-lines": [2, { "max": 1, "maxEOF": 1 }]
+  }
+}

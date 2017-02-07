@@ -1,0 +1,23 @@
+{
+  "name": "fac-workshop-materials",
+  "version": "1.0.0",
+  "description": "Presentations and reference code for Founders and Coders (FAC) workshops",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ./src/server.js",
+    "startmon": "nodemon ./src/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ipcortex/fac-workshop-materials.git"
+  },
+  "author": "Peter Wilson/IpCortex",
+  "license": "BSD",
+  "bugs": {
+    "url": "https://github.com/ipcortex/fac-workshop-materials/issues"
+  },
+  "homepage": "https://github.com/ipcortex/fac-workshop-materials#readme",
+  "dependencies": {
+    "https": "^1.0.0"
+  }
+}
