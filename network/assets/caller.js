@@ -1,4 +1,4 @@
-/* global document */
+/* global document, EndPoint */
 const VideoEndPoint = (function() {
   const RING_TIMEOUT = 5000; // 5 seconds.
 
@@ -15,11 +15,12 @@ const VideoEndPoint = (function() {
    *
    */
   class VideoEndPoint extends EndPoint {
-    constructor(...args) {
+    constructor(name, videoRemoteTag, videoLocalTag) {
       // Create a poller for this client
-      super(...args);
-
-      this._state = 'IDLE';
+      super(name);
+      this._videoRemoteTag = videoRemoteTag;
+      this._videoLocalTag  = videoLocalTag;
+      this._state          = 'IDLE';
     }
     /** @method setState
      *  @description Single point through which state changes are made. Simple utility that allows us to easily
@@ -85,9 +86,6 @@ const VideoEndPoint = (function() {
      *  have been successfully attached.
      */
     createPeerConnection() {
-      var videoWrap = document.querySelector('#'+this._name);
-      var videoTag = videoWrap.querySelector('.video');
-
       // Create a peer connector for our end of this conversation
       var pc = this.peerConnector = new RTCPeerConnection();
       this.log("PEER CONNECTOR CREATED");
@@ -100,21 +98,18 @@ const VideoEndPoint = (function() {
       };
       pc.onaddstream = (e) => {
         this.log('Received remote stream for: ', this._name);
-        videoTag.srcObject = e.stream;
-        videoTag.play();
+        this._videoRemoteTag.srcObject = e.stream;
+        this._videoRemoteTag.play();
       };
-      // Get our media and attach to the local tag and the PC
-      var videoSelfTag = videoWrap.querySelector('.self');
-
       return this.getMediaStream().then((mediaStream) => {
         // Create a peer connector for our end of this call
         pc.addStream(mediaStream);
 
         // Attach this stream to a video tag...
-        videoSelfTag.srcObject = mediaStream;
+        this._videoLocalTag.srcObject = mediaStream;
 
         // And set the 'play' state for this tag.
-        videoSelfTag.play();
+        this._videoLocalTag.play();
 
         return Promise.resolve(pc);
       });
@@ -275,15 +270,10 @@ const VideoEndPoint = (function() {
         }
         this.setState('IDLE');
 
-        // Find the two video tags we have (the remote end and the thumbnail of ourselves) and close.
-        var videoWrap = document.querySelector('#'+this._name);
-        var videoTag = videoWrap.querySelector('.video');
-        var videoSelfTag = videoWrap.querySelector('.self');
-
-        videoTag.pause();
-        videoTag.srcObject = null;
-        videoSelfTag.pause();
-        videoSelfTag.srcObject = null;
+        this._videoRemoteTag.pause();
+        this._videoRemoteTag.srcObject = null;
+        this._videoLocalTag.pause();
+        this._videoLocalTag.srcObject = null;
       }
     }
     /** @method hangupCall

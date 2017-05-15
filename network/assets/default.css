@@ -30,8 +30,8 @@ body {
 #resources .hide {
   display:none
 }
-video.video {width:100%;height:auto;border:1px solid #c0c0c0}
-video.self  {width:100px;height:auto;border:1px solid #c0c0c0;position:relative;bottom:10px;right:-10px;background-color:#fff}
+video.remoteVideo {width:100%;height:auto;border:1px solid #c0c0c0}
+video.localVideo {width:100px;height:auto;border:1px solid #c0c0c0;position:relative;bottom:10px;right:-10px}
 
 form .message {color:#ff0000; font-weight:bold;text-align:center}
 input[type="text"], input[type="password"], input[type="email"] {

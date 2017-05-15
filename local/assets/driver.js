@@ -3,10 +3,20 @@
   document.addEventListener("DOMContentLoaded", function() {
     // Create four end points, one for out sender and one for our receiver.
     console.log("CREATING VIDEO END POINTS");
-    new VideoEndPoint('V1');
-    new VideoEndPoint('V2');
-    new VideoEndPoint('V3');
-    new VideoEndPoint('V4');
+
+    // getVideoTags
+    function getVideoTags(name) {
+      return [
+        name,
+        document.querySelector('#'+name+' .remoteVideo'),
+        document.querySelector('#'+name+' .localVideo')
+      ];
+    }
+
+    new VideoEndPoint(...getVideoTags('V1'));
+    new VideoEndPoint(...getVideoTags('V2'));
+    new VideoEndPoint(...getVideoTags('V3'));
+    new VideoEndPoint(...getVideoTags('V4'));
 
     /**** Utility DOM functions ****/
     function getCurrentTarget(ev) {

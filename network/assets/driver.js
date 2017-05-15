@@ -46,8 +46,11 @@
         // And change the ID of this element to be the name currently entered
         ctrl.setAttribute('id',myname);
       }
-
-      localEndPoint = new VideoEndPoint(myname);
+      localEndPoint = new VideoEndPoint(
+        myname,
+        document.querySelector('#videowrap .remoteVideo'),
+        document.querySelector('#videowrap .localVideo')
+      );
     }
     // Set up button handlers
     document.querySelectorAll('.startCall').forEach((elem) => {elem.addEventListener('click', startCall);});
