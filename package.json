@@ -4,9 +4,10 @@
   "description": "Presentations and reference code for Founders and Coders (FAC) workshops",
   "main": "index.js",
   "scripts": {
-    "local": "node ./local/server.js",
-    "https": "node ./https/server.js",
-    "remote":"node ./src/server.js"
+    "https":  "node ./https/server.js",
+    "video":  "node ./video/server.js",
+    "local":  "node ./local/server.js",
+    "network":"node ./network/server.js"
   },
   "repository": {
     "type": "git",
