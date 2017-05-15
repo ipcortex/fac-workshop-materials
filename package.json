@@ -4,8 +4,9 @@
   "description": "Presentations and reference code for Founders and Coders (FAC) workshops",
   "main": "index.js",
   "scripts": {
-    "start": "node ./src/server.js",
-    "startmon": "nodemon ./src/server.js"
+    "local": "node ./local/server.js",
+    "https": "node ./https/server.js",
+    "remote":"node ./src/server.js"
   },
   "repository": {
     "type": "git",
