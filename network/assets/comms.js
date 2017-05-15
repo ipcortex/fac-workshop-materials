@@ -6,8 +6,6 @@ const EndPoint = (function() {
   var serverAddress = 'https://127.0.0.1:8000';
   // var serverAddress = '';
 
-  const RING_TIMEOUT = 5*1000;
-
   // URLs for RPC operations:
   var url_poll = serverAddress+'/poll/';
   var url_send = serverAddress+'/send/';
