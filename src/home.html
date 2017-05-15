@@ -4,7 +4,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <link href='//fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
     <script src="/assets/adapter.js"></script>
-    <script src="/assets/present.js"></script>
+    <script src="/assets/comms.js"></script>
+    <script src="/assets/caller.js"></script>
+    <script src="/assets/driver.js"></script>
     <link rel="stylesheet" href='/assets/grid.css'>
     <link rel="stylesheet" href='/assets/default.css'>
   </head>
@@ -14,12 +16,16 @@
     <div class="container">
       <div class='row' id="banner">
         <div class="col-xs-12" id='logo-container'>
-          <h1>TEST PAGE</h1>
+          <h1>Web RTC Comms</h1>
+          <div id="identity">
+            <input type="text" name="myname" class="myname" placeholder="Enter your name">
+            <button class="initialise">start</button>
+          </div>
         </div>
       </div>
-      <div class="row">
-        <div class="col-xs-12 col-md-6" id='V1' style="outline:2px solid #c0c0c0;position:relative">
-          <h2>Party 1</h2>
+      <div id="videocontrols" class="row hidden">
+        <div class="col-xs-12" id='V1' style="outline:2px solid #c0c0c0;position:relative">
+          <h2>Call...</h2>
           <button class="pause">Pause</button>
           <button class="endCall">Hangup</button>
           <input type="text" name="target" class="target" placeholder="Enter recipient call name">
@@ -27,7 +33,7 @@
           <video class="video" id="video_1"></video>
           <video class="self" id="self_1"></video>
         </div>
-        <div class="col-xs-12 col-md-6" id='V2' style="outline:2px solid #c0c0c0;position:relative">
+        <!-- div class="col-xs-12 col-md-6" id='V2' style="outline:2px solid #c0c0c0;position:relative">
           <h2>Party 2</h2>
           <button class="pause">Pause</button>
           <button class="endCall">Hangup</button>
@@ -35,9 +41,9 @@
           <button class="startCall">Call</button>
           <video class="video"></video>
           <video class="self"></video>
-        </div>
+        </div -->
       </div>
-      <div class="row">
+      <!-- div class="row">
         <div class="col-xs-12 col-md-6" id='V3' style="outline:2px solid #c0c0c0;position:relative">
           <h2>Party 3</h2>
           <button class="pause">Pause</button>
@@ -56,7 +62,7 @@
           <video class="video"></video>
           <video class="self"></video>
         </div>
-      </div>
+      </div -->
     </div>
   </body>
 </head>
