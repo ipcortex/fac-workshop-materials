@@ -130,7 +130,7 @@ const VideoEndPoint = (function() {
         this.setState('CALLED');
         this._party = from;
 
-        this.createPeerConnection(from);
+        this.createPeerConnection();
 
         this.send(from, 'ACCEPT_CALL');
       }
@@ -154,7 +154,7 @@ const VideoEndPoint = (function() {
         this.setState('CALLER');
 
         // And then give the transmitting stream the ones we have
-        this.createPeerConnection(from).then((pc) => {
+        this.createPeerConnection().then((pc) => {
           this.log('PeerConnector (CALLER) createOffer start');
           var offerOptions = {
             offerToReceiveAudio: 1,
