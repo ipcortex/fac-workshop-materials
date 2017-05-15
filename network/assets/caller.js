@@ -1,6 +1,6 @@
 /* global document */
 const VideoEndPoint = (function() {
-  const RING_TIMEOUT = 3000; // 3 seconds.
+  const RING_TIMEOUT = 5000; // 5 seconds.
 
   function _onCreateSessionDescriptionError(error) {
     console.log('===============================================================');
