@@ -1,0 +1,31 @@
+<html>
+  <head>
+    <title>Hello World</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <link href='//fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+    <script src="/assets/adapter.js"></script>
+    <link rel="stylesheet" href='/assets/grid.css'>
+    <link rel="stylesheet" href='/assets/default.css'>
+  </head>
+  <body>
+    <h1>Video Tag Demo</h1>
+    <video id="videotag" autoplay></video>
+    <script type="text/javascript">
+      // Wait until the DOM is ready
+      document.addEventListener("DOMContentLoaded", function() {
+        // Find our video tag
+        var videoTag = document.querySelector('#videotag');
+
+        if (videoTag!=null) {
+          navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+          .then((mediaStream) => {
+            videoTag.srcObject = mediaStream;
+
+            // And set the 'play' state for this tag.
+            videoTag.play();
+          });
+        }
+      });
+    </script>
+  </body>
+</head>
