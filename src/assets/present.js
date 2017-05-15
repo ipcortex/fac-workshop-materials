@@ -7,6 +7,8 @@
     var serverAddress = 'https://127.0.0.1:8000';
     // var serverAddress = '';
 
+    const RING_TIMEOUT = 5*1000;
+
     // URLs for RPC operations:
     var url_poll = serverAddress+'/poll/';
     var url_send = serverAddress+'/send/';
@@ -81,18 +83,22 @@
      *  The signaling transport layer *must* be encapsulated in this class such that replacing one transport
      *  (eg REST Polling) with another (eg WebSockets) should not require any changes to the derived classes.
      *  @prop {String} _name - the unique directory name for this end point. It's address.
-     *  @prop {EndPoint} _roster[]  - Set of all known EndPoints
      *  @prop {Object} _endPoints @static - Directory of local EndPoint objects indexed by _name
      */
     class EndPoint {
       constructor(ep_name) {
         this._name = ep_name;
-        this._roster = [];
 
         EndPoint._endPoints[ep_name] = this;
 
         // Start background poller
         window.setInterval(() => this._poll(), 2000);
+      }
+      /** @method log
+       *  @description simple wrapper around console.log that prefixes the name ofthe EndPoint that's generating the message
+       */
+      log(...args) {
+        console.log('NAME: '+this._name,...args);
       }
       /** @method get
        *  @description Every end point has to have a name which must be unique. This method
@@ -110,36 +116,6 @@
       _poll() {
         poll(this._name).then((res) => {
           if (res!=null) {
-            if (res.directory!=null) {
-              // Compare directory with existing roster
-              var online = {};
-              res.directory.forEach((n) => {
-                online[n]=1;
-              });
-              var changed = false, newRoster=[];
-              // Any names we don't know about
-
-              this._roster.forEach((old) => {
-                if (online.hasOwnProperty(old)) {
-                  // Still online
-                  newRoster.push(old);
-                  delete online[old];
-                }
-              });
-              var changed = (newRoster.length!=this._roster.length);
-              // Anyone left in 'online' is new
-              var newMembers = Object.keys(online);
-
-              if (newMembers.length>0) {
-                newRoster.splice(0,0,...newMembers);
-                changed = true;
-              }
-              if (changed) {
-                console.log("ROSTER CHANGED...", newRoster);
-                this._roster = newRoster;
-                this.updateRoster();
-              }
-            }
             if (res.messages!=null && res.messages.length>0) {
               console.log("DATA RECEIVED FROM POLL: ", res);
               // Process each to the destination (me)
@@ -192,6 +168,17 @@
 
         this._state = 'IDLE';
       }
+      /** @method setState
+       *  @description Single point through which state changes are made. Simple utility that allows us to easily
+       *  trace state changes.
+       *  @param {String} newState - The new state for this end point
+       *  @return {EndPoint} this - to allow chaining.
+       */
+      setState(newState) {
+        this.log("STATE CHANGE FROM "+this._state+" TO "+newState);
+        this._state = newState;
+        return this;
+      }
       /** @method getMediaStream
        *  @description Return a Promise that resolves to the media to be used for this user. Each EndPoint has it's own Promise. The
        *  first time this method is invoked on an EndPoint it requests the media from the browser and stores then media promise returned.
@@ -202,20 +189,6 @@
           this._localMediaPromise = navigator.mediaDevices.getUserMedia({ video: true });
         }
         return this._localMediaPromise;
-      }
-      /** @method updateRoster
-       *  @description Called by the base class when it detects a change in the stations currently available. This
-       *  method redraw the options available in the remote EndPoint list (drop down list).
-       */
-      updateRoster() {
-        // Flush the current roster and re-render.
-        var select = document.querySelector('#'+this._name+' select');
-        var options = [];
-        this._roster.forEach((n) => {
-          if (n!=this._name)
-            options.push('<option>'+n+'</option>');
-        });
-        select.innerHTML = '<option>-- call destination --</option>'+options.join('');
       }
       /** @method receive
        *  @description Entry point called by the base class when it receives a message for this object from another EndPoint.
@@ -228,26 +201,22 @@
         //console.log("END POINT RX PROCESSING... ("+from+", "+operation+")", data);
         switch (operation) {
         case 'CALL_REQUEST':
-        case 'REQ_CALL':
-          this.requestIncomingCall(from, data);
+          this.incomingCall(from, data);
           break;
         case 'DENIED':
           this.callDenied(from, data);
           break;
-        case 'CALL_ACCEPT':
-        case 'ACCEPT':
+        case 'ACCEPT_CALL':
           this.callAccepted(from, data);
           break;
-        case 'OFFER':
         case 'SDP_OFFER':
           this.receivedIncomingSDPoffer(from, data);
           break;
-        case 'ANSWER':
         case 'SDP_ANSWER':
           this.receivedIncomingSDPanswer(from, data);
           break;
-        case 'CANDIDATE':
-          this.receivedCandidate(from, data);
+        case 'ICE_CANDIDATE':
+          this.receivedIceCandidate(from, data);
           break;
         case 'END_CALL':
           this.endCall(from, data);
@@ -262,22 +231,22 @@
        *  @return {Promose} resolves when the Peer Connection has been created and the media streams
        *  have been successfully attached.
        */
-      createPeerConnection(from) {
+      createPeerConnection() {
         var videoWrap = document.querySelector('#'+this._name);
         var videoTag = videoWrap.querySelector('.video');
 
         // Create a peer connector for our end of this conversation
         var pc = this.peerConnector = new RTCPeerConnection();
-        console.log("RECEIVING PEER CREATED");
+        this.log("PEER CONNECTOR CREATED");
         pc.onicecandidate = (e) => {
-          console.log("HAVE ICE CANDIDATE (RX): ", e);
+          this.log("HAVE ICE CANDIDATE (CALLED): ", e);
           if (e.candidate!=null)
-            this.send(from, "CANDIDATE", e.candidate);
+            this.send(this._party, "ICE_CANDIDATE", e.candidate);
           else
-            console.log("NOT SENDING EMPTY CANDIDATE");
+            this.log("NOT SENDING EMPTY CANDIDATE");
         };
         pc.onaddstream = (e) => {
-          console.log('Received remote stream fo: ', this._name);
+          this.log('Received remote stream for: ', this._name);
           videoTag.srcObject = e.stream;
           videoTag.play();
         };
@@ -297,25 +266,25 @@
           return Promise.resolve(pc);
         });
       }
-      /** @method requestIncomingCall
+      /** @method incomingCall
        *  @description incoming call request handler. If this EndPoint is IDLE then we accept the call
-       *   and reply with 'CALL_ACCEPT'. If we're already busy then reject the call by sending 'DENIED'.
+       *   and reply with 'ACCEPT_CALL'. If we're already busy then reject the call by sending 'DENIED'.
        *
        *   If the call is accepted we create our local peer connection ready for the remote end and then
-       *   set our state to 'RX' (receiving a call).
+       *   set our state to 'CALLED' (receiving a call).
        */
-      requestIncomingCall(from) {
+      incomingCall(from) {
         // Only accept a call if we're currently idle
-        console.log("NAME: "+this._name+" REQUESTING INCOMING CALL FROM: "+from);
+        this.log("REQUESTING INCOMING CALL FROM: "+from);
         if (this._state!='IDLE')
           this.send(from, 'DENIED');
         else {
-          this._state = 'RX';
-          this.party = from;
+          this.setState('CALLED');
+          this._party = from;
 
           this.createPeerConnection(from);
 
-          this.send(from, 'CALL_ACCEPT');
+          this.send(from, 'ACCEPT_CALL');
         }
       }
       /** @method callAccepted
@@ -327,40 +296,55 @@
        *   as out local description and send the offer to the remote EndPoint ('OFFER').
        */
       callAccepted(from) {
-        console.log("NAME: "+this._name+" CALL ACCEPTED: "+from);
+        if (this._state == 'RINGING' && this._party==from) {
+          this.log("CALL ACCEPTED: "+from);
+          if (this._ringTimer!=null) {
+            // Cancel any remaining timeout
+            window.clearTimeout(this._ringTimer);
+            delete this._ringTimer;
+          }
+          this.setState('CALLER');
 
-        this._state = 'TX';
+          // And then give the transmitting stream the ones we have
+          this.createPeerConnection(from).then((pc) => {
+            this.log('PeerConnector (CALLER) createOffer start');
+            var offerOptions = {
+              offerToReceiveAudio: 1,
+              offerToReceiveVideo: 1
+            };
+            pc.createOffer(
+              offerOptions
+            ).then(
+              (offer) => {
+                this.log("WE HAVE AN OFFER...",offer);
 
-        // And then give the transmitting stream the ones we have
-        this.createPeerConnection(from).then((pc) => {
-          console.log('PeerConnector (TX) createOffer start');
-          var offerOptions = {
-            offerToReceiveAudio: 1,
-            offerToReceiveVideo: 1
-          };
-          pc.createOffer(
-            offerOptions
-          ).then(
-            (offer) => {
-              console.log("WE HAVE AN OFFER...",offer);
+                // Give the offer description to our end of the connector
+                pc.setLocalDescription(offer);
 
-              // Give the offer description to our end of the connector
-              pc.setLocalDescription(offer);
-
-              // Send the offer to the remote end of the peer connector
-              this.send(from, "OFFER", offer );
-            },
-            onCreateSessionDescriptionError
-          );
-        });
+                // Send the offer to the remote end of the peer connector
+                this.send(from, "SDP_OFFER", offer);
+              },
+              onCreateSessionDescriptionError
+            );
+          });
+        }
       }
       /** @method callDenied
        *  @description Response from the remote EndPoint to our CALL_REQ method declining our invitation. In this
        *  implementation the only reason we decline a call is if we are already on another call.
        */
       callDenied(from) {
-        console.log("NAME: "+this._name+" CALL DENIED: "+from);
-        alert("Can't call "+from+", the line is busy...");
+        if (this._state=='RINGING' && this._party==from) {
+          this.log("CALL DENIED: "+from);
+          alert("Can't call "+from+", the line is busy or the target address is offline/doesn't exist...");
+          this.setState('IDLE');
+          delete this._party;
+          if (this._ringTimer!=null) {
+            // Cancel any remaining timeout
+            window.clearTimeout(this._ringTimer);
+            delete this._ringTimer;
+          }
+        }
       }
       /** @method receivedIncomingSDPoffer
        *  @description Process an incoming SDP offer. This is ignored if we're not currently the receiving party in a
@@ -368,24 +352,27 @@
        *  as our local description then send back to the instigator of the call with the 'ANSWER' method.
        */
       receivedIncomingSDPoffer(from, data) {
-        console.log("PROCESSING INCOMING SDP OFFER...");
-        if (this._state=='RX') {
-          console.log("Accepting incoming offer...", data);
+        this.log("PROCESSING INCOMING SDP OFFER...");
+        if (this._state=='CALLED') {
+          this.log("Accepting incoming offer...", data);
           this.peerConnector.setRemoteDescription(data).then(
-            () => console.log("setRemoteDescription COMPLETE"),
-            () => console.log("setRemoteDescription FAILED")
+            () => this.log("setRemoteDescription COMPLETE"),
+            () => this.log("setRemoteDescription FAILED")
           );
-          // And generate an answering offer
-          this.peerConnector.createAnswer().then(
-            (desc) => {
-              console.log('Answer from RECEIVER {'+this._name+'}:\n' + desc.sdp);
-              this.peerConnector.setLocalDescription(desc);
+          // Create our answer ONLY after we have our own media
+          this.getMediaStream().then(() => {
+            // And generate an answering offer
+            this.peerConnector.createAnswer().then(
+              (desc) => {
+                this.log('Answer from RECEIVER {'+this._name+'}:\n' + desc.sdp);
+                this.peerConnector.setLocalDescription(desc);
 
-              // And send this to desciption to the remote end
-              this.send(from, "ANSWER", desc);
-            },
-            onCreateSessionDescriptionError
-          );
+                // And send this to desciption to the remote end
+                this.send(from, "SDP_ANSWER", desc);
+              },
+              onCreateSessionDescriptionError
+            );
+          });
         }
       }
       /** @method receivedIncomingSDPoffer
@@ -393,31 +380,31 @@
        *  offer. We store this as out remote description.
        */
       receivedIncomingSDPanswer(from, data) {
-        console.log("PROCESSING INCOMING SDP ANSWER...");
-        if (this._state=='TX') {
-          console.log("Accepting incoming offer...", data);
+        this.log("PROCESSING INCOMING SDP ANSWER...");
+        if (this._state=='CALLER') {
+          this.log("Accepting incoming offer...", data);
           this.peerConnector.setRemoteDescription(data).then(
-            () => console.log("setRemoteDescription COMPLETE"),
-            () => console.log("setRemoteDescription FAILED")
+            () => this.log("setRemoteDescription COMPLETE"),
+            () => this.log("setRemoteDescription FAILED")
           );
         }
       }
-      /** @method receivedCandidate
+      /** @method receivedIceCandidate
        *  @description An serialised ICE candidate has been received. There can be multiple ICE candidates per call. Each needs to be
        *  restored by creating a new RTCIceCandidate object and then giving that to the calls peer connection object.
        */
-      receivedCandidate(from, data) {
+      receivedIceCandidate(from, data) {
         if (this._state!='IDLE') {
-          console.log("PROCESSING INCOMING CANDIDATE FOR: "+this._name, data);
+          this.log("PROCESSING INCOMING CANDIDATE FOR: "+this._name, data);
           var candidate = new RTCIceCandidate(data);
-          console.log("CREATED CANDIDATE: ", candidate);
-          console.log("PEER CONNETOR: ",this.peerConnector);
+          this.log("CREATED CANDIDATE: ", candidate);
+          this.log("PEER CONNETOR: ",this.peerConnector);
           this.peerConnector.addIceCandidate(candidate)
           .then(
-            () => {console.log("Found ICE candidates",this.peerConnector);},
+            () => {this.log("Found ICE candidates",this.peerConnector);},
             (err) => {
-              console.log('===============================================================');
-              console.log("ERROR: Can't Find ICE candidates",err,this.peerConnector);
+              this.log('===============================================================');
+              this.log("ERROR: Can't Find ICE candidates",err,this.peerConnector);
             }
           );
         }
@@ -426,14 +413,16 @@
        *  @description Called to close the local end of a call. Can be called directly if it's our end
        *  or as the result of a remote method invocation.
        */
-      endCall(/* from, data */) {
-        /* RECIEVED AN ENDCALL FROM REMOTE STATION */
-        if ((this._state=='RX' || this._state=='TX') && this.peerConnector!=null) {
-          this.peerConnector.close();
-          delete this.peerConnector;
-          this._state = 'IDLE';
+      endCall(from /*, data */) {
+        if ((this._state=='CALLED' || this._state=='CALLER') && this._party==from) {
+          if (this.peerConnector!=null) {
+            // We have a Peer Connector that needs to be closed now
+            this.peerConnector.close();
+            delete this.peerConnector;
+          }
+          this.setState('IDLE');
 
-          // Find my video tag (self) and close.
+          // Find the two video tags we have (the remote end and the thumbnail of ourselves) and close.
           var videoWrap = document.querySelector('#'+this._name);
           var videoTag = videoWrap.querySelector('.video');
           var videoSelfTag = videoWrap.querySelector('.self');
@@ -450,25 +439,35 @@
        */
       hangupCall() {
         // Are we in a call?
-        if ((this._state=='RX' || this._state=='TX') && this.peerConnector!=null) {
-          this.endCall();
+        if (this._state=='CALLED' || this._state=='CALLER') {
+          this.endCall(this._party);
 
-          // Tell the other end
-          this.send(this.party, 'END_CALL');
+          // We're the end hanging up the call so we need to tell the other end
+          this.send(this._party, 'END_CALL');
+          delete this._party;
         }
       }
       /** @method startCall
        *  @description The user wants to make a call to a remote EndPoint (target). This first part of the process
        *  is to send a message to the target to request the call. The remote EndPoint may accept the call by sending
-       *  'CALL_ACCEPT' or decline the call by sending 'DENIED'. Nothing happens at our end other than to send the
-       *  message requesting the call. The actuall call is set up if the remote station accepts and sends 'CALL_ACCEPT'.
+       *  'ACCEPT_CALL' or decline the call by sending 'DENIED'. Nothing happens at our end other than to send the
+       *  message requesting the call. The actuall call is set up if the remote station accepts and sends 'ACCEPT_CALL'.
        *
        *  If the local EndPoint (this) is already in a call (_state is NOT IDLE) then we refuse to start another call.
        *  @param {String} target - the name of the remote party that we want to start a call with
        */
       startCall(target) {
         if (this._state=='IDLE') {
-          this.send(target, 'REQ_CALL');
+          this.setState('RINGING');
+          this._party = target;
+          this.send(target, 'CALL_REQUEST');
+
+          // Start a timer in case there's no response from the remote end.
+          this._ringTimer = window.setTimeout(() => {
+            this.log("CALL FAILED - "+this._state+", Timeout",target,this._party);
+            delete this._ringTimer;
+            this.callDenied(target);
+          }, RING_TIMEOUT);
         }
         else {
           alert("Can't make another call - busy");
@@ -481,9 +480,9 @@
       pauseCall() {
         if (this._state != 'IDLE') {
           this.getMediaStream().then((media) => {
-            console.log("GOT STREAM TO PAUSE");
+            this.log("GOT STREAM TO PAUSE");
             media.getTracks().forEach((track) => {
-              console.log("TOGGLING TRACK STATE: ",track);
+              this.log("TOGGLING TRACK STATE: ",track);
               track.enabled = !track.enabled;
             });
           });

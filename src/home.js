@@ -9,9 +9,9 @@ module.exports = {
   handler: (request, reply) => {
     // console.log("REQ: ",request);
     // Return static home page.
-    if (fs.existsSync('src/home.html')) {
+    if (fs.existsSync('home.html')) {
       reply.writeHead(200, {"Content-Type": "text/html"});
-      fs.createReadStream('src/home.html').pipe(reply);
+      fs.createReadStream('home.html').pipe(reply);
     }
   }
 };

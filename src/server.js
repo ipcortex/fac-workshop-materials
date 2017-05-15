@@ -9,37 +9,35 @@ const options = {
 
 // Our routes...
 const routes = [
-//require('../routes/assets.js'),
   require('./assets.js'),
   require('./home.js'),
   require('./poll.js'),
-  require('./send.js'),
+  require('./send.js')
 ];
 
+var rootDir = (__dirname).replace(/^.*\//,'');
+process.chdir(__dirname);
+console.log("ROOT DIR: "+__dirname);
 function decodePath(req) {
-  return (req.url||'/').replace(/^.\:\d+/,'').replace(/\?.*$/,'');
+  return (req.url||'/').replace(/^.:\d+/,'').replace(/\?.*$/,'');
 }
 function processRequest(req, res, method, path, payload) {
-  console.log("PROCESSING PATH: "+path);
-
   // Split the path into fragments and look for a matching element.
-  var pathParts = path.replace(/^\/(\:\d+)?|\/$/g,'').split(/\//g);
-  console.log("PATH PARTS: ", pathParts);
+  var pathParts = path.replace(/^\/(:\d+)?|\/$/g,'').split(/\//g);
 
   method = method.toUpperCase();
-
-  routes.some((r) => {
+  res.statusCode = 404;
+  var ok = routes.some((r) => {
     // Match method and path?
     if (r.method.indexOf(method)>=0 && pathParts.length==r.path.length) {
-      console.log("PATH LENGTH MATCH AGAINST: "+JSON.stringify(r));
       var exact = r.path.every(function(v,idx) {
         return (v.t=='param' || (v.t=='literal' && v.v==pathParts[idx]));
       });
       if (exact) {
-        console.log("----- EXACT MATCH -----");
         // We have a match. Decode any path paramters
         req.route = r;
         req.payload = (payload||'');
+        req.rootDir = rootDir;
 
         var pathParams = req.params = {};
         r.path.forEach((v, idx) => {
@@ -50,13 +48,17 @@ function processRequest(req, res, method, path, payload) {
         r.handler(req, res);
         return true;
       }
-      console.log("===== FAILED MATCH =====");
-      return false;
-    };
+    }
+    return false;
   });
+  if (res.statusCode==404) {
+    // Nothing changed the response code from 404 so
+    res.writeHead(404, 'NOT FOUND');
+    res.end();
+  }
 }
 
-var paramRegexp = /^\{([\w\_\-\$]+)\}$/;
+var paramRegexp = /^\{([\w_\-\$]+)\}$/;
 function prepareRoutes() {
   // Once only pass through the 'routes' array to make it more usable.
   routes.forEach((r) => {
@@ -70,17 +72,10 @@ function prepareRoutes() {
 prepareRoutes();
 
 https.createServer(options, (req, res) => {
-  // res.writeHead(200);
-  // res.end('hello world\n');
-  console.log("REQUEST.HEADERS: ",req.headers);
-  console.log("REQUEST.METHOD: ",req.method);
-  console.log("-----------------------------");
-
   // What's the path?
   var path = decodePath(req);
   var body = '';
 
-  console.log("REQUEST.URL: ",path);
   if (req.method.search(/^POST$/i)==0) {
     // Get all POST data then handle request.
     req.on('data', (chunk) => {

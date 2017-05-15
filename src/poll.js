@@ -3,9 +3,6 @@
 const Directory = require('./directory.js');
 
 function processPage(request, reply) {
-  console.log("POLL METHOD: "+request.route.method);
-  // console.log("REQUEST: POLL: ", request);
-
   const endpointName = request.params.endpointname;
 
   var endpoint;
