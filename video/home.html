@@ -8,13 +8,15 @@
     <link rel="stylesheet" href='/assets/default.css'>
   </head>
   <body>
+
     <h1>Video Tag Demo</h1>
     <video id="videotag" autoplay></video>
+
     <script type="text/javascript">
       // Wait until the DOM is ready
       document.addEventListener("DOMContentLoaded", function() {
         // Find our video tag
-        var videoTag = document.querySelector('#videotag');
+        const videoTag = document.querySelector('#videotag');
 
         if (videoTag!=null) {
           navigator.mediaDevices.getUserMedia({ video: true, audio: true })
@@ -27,5 +29,10 @@
         }
       });
     </script>
+
+    <script src="./assets/comms.js"></script>
+    <script src="./assets/driver.js"></script>
+    <script src="./assets/caller.js"></script>
+
   </body>
 </head>

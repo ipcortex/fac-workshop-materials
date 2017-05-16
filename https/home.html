@@ -8,6 +8,30 @@
     <link rel="stylesheet" href='/assets/default.css'>
   </head>
   <body>
-    <h1>Hello.....</h1>
+
+    <h1>video</h1>
+    <video id="videoTag" autoplay></video>
+    
+    <script type="text/javascript" src="assets/comms.js"></script>
+    <script type="text/javascript" src="assets/caller.js"></script>
+    <script type="text/javascript" src="assets/driver.js"></script>
+
+    <script>
+
+      const videoTag = document.getElementById('videoTag');
+
+      if (videoTag) {
+        navigator.mediaDevices.getUserMedia({audio: true, video: true})
+        .then(function (mediaStream) {
+          videoTag.srcObject = mediaStream;
+        })
+        .catch(function (err) {
+          console.log('video not working', err);
+      })
+    }
+
+    </script>
+
+
   </body>
 </head>
