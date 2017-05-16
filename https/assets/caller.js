@@ -8,6 +8,8 @@ const VideoEndPoint = (function() {
     constructor(ep_name) {
       // Create a poller for this client
       super(ep_name);
+
+      this._state = 'IDLE';
     }
     /** @method receive
      *  @description Entry point called by the base class when it receives a message for this object from another EndPoint.
