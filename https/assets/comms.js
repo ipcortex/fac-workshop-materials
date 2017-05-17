@@ -29,6 +29,7 @@ const EndPoint =
      */
     send(targetName, operation, data) {
       EndPoint.names[targetName].receive(this._name, operation, data);
+      
     }
     /** @method receive
      *  @description This method will return a message from a remote end point. This method *MUST* be overridden in the

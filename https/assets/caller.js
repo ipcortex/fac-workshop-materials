@@ -5,9 +5,36 @@ const VideoEndPoint = (function() {
      *  represents an actual video UI end point.
      */
   class VideoEndPoint extends EndPoint {
-    constructor(ep_name) {
-
+    constructor(ep_name, remoteVideoTag, localVideoTag, statusTag) {
       super(ep_name);
+      this._remoteVideoTag = remoteVideoTag;
+      this._localVideoTag = localVideoTag;
+      this._statusTag = statusTag;
+      this._state = 'IDLE';
+      this._onCallWith = null;
+    }
+
+    setState(newState) {
+      this._statusTag.innerText = newState;
+      this._state = newState;
+    }
+
+    makeCall(callTargetName, data) {
+      // Only make a call if not already calling someone else
+      // debugger;
+      if (this._state === 'IDLE') {
+        this.send(callTargetName, 'CALL_REQUEST', data);
+        this.setState('ONTHEPHONE');
+      }
+      //
+      if (this._state === 'IDLE') {
+        this.setState('CALLING');
+      }
+    }
+
+    acceptCall() {
+      console.log(this._onCallWith);
+      this.send(this._onCallWith, 'ACCEPT_CALL');
     }
         /** @method receive
          *  @description Entry point called by the base class when it receives a message for this object from another EndPoint.
@@ -19,11 +46,16 @@ const VideoEndPoint = (function() {
     receive(from, operation, data) {
       this.log("END POINT RX PROCESSING... (" + from + ", " + operation + ")", data);
       switch (operation) {
-      case 'CALL_REQUEST':
+      case 'CALL_REQUEST': {
+        this._onCallWith = from;
+        this.setState('CALLED');
+        this.acceptCall();
         break;
+      }
       case 'DENIED':
         break;
       case 'ACCEPT_CALL':
+        this.setState('ONTHEPHONE');
         break;
       case 'SDP_OFFER':
         break;

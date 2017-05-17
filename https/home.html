@@ -9,28 +9,64 @@
   </head>
   <body>
 
-    <h1>video</h1>
-    <video id="videoTag" autoplay></video>
-    
+    <script type="text/javascript">
+    </script>
+    <div class="container">
+      <div class='row' id="banner">
+        <div class="col-xs-12" id='logo-container'>
+          <h1>webRTC Local Signaling Demo</h1>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-xs-12 col-md-6" id='V1' style="outline:2px solid #c0c0c0;position:relative">
+          <h2>Party 1</h2>
+          <button class="pause">Pause</button>
+          <button class="endCall">Hangup</button>
+          <input type="text" name="target" class="target" placeholder="Enter recipient call name">
+          <button class="startCall">Call</button>
+          <span class="state"></span>
+          <video class="remoteVideo"></video>
+          <video class="localVideo"></video>
+        </div>
+        <div class="col-xs-12 col-md-6" id='V2' style="outline:2px solid #c0c0c0;position:relative">
+          <h2>Party 2</h2>
+          <button class="pause">Pause</button>
+          <button class="endCall">Hangup</button>
+          <input type="text" name="target" class="target" placeholder="Enter recipient call name">
+          <button class="startCall">Call</button>
+          <span class="state"></span>
+          <video class="remoteVideo"></video>
+          <video class="localVideo"></video>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-xs-12 col-md-6" id='V3' style="outline:2px solid #c0c0c0;position:relative">
+          <h2>Party 3</h2>
+          <button class="pause">Pause</button>
+          <button class="endCall">Hangup</button>
+          <input type="text" name="target" class="target" placeholder="Enter recipient call name">
+          <button class="startCall">Call</button>
+          <span class="state"></span>
+          <video class="remoteVideo"></video>
+          <video class="localVideo"></video>
+        </div>
+        <div class="col-xs-12 col-md-6" id='V4' style="outline:2px solid #c0c0c0;position:relative">
+          <h2>Party 4</h2>
+          <button class="pause">Pause</button>
+          <button class="endCall">Hangup</button>
+          <input type="text" name="target" class="target" placeholder="Enter recipient call name">
+          <button class="startCall">Call</button>
+          <span class="state"></span>
+          <video class="remoteVideo"></video>
+          <video class="localVideo"></video>
+        </div>
+      </div>
+    </div>
+
+
     <script type="text/javascript" src="assets/comms.js"></script>
     <script type="text/javascript" src="assets/caller.js"></script>
     <script type="text/javascript" src="assets/driver.js"></script>
-
-    <script>
-
-      const videoTag = document.getElementById('videoTag');
-
-      if (videoTag) {
-        navigator.mediaDevices.getUserMedia({audio: true, video: true})
-        .then(function (mediaStream) {
-          videoTag.srcObject = mediaStream;
-        })
-        .catch(function (err) {
-          console.log('video not working', err);
-      })
-    }
-
-    </script>
 
 
   </body>
