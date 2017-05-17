@@ -15,11 +15,12 @@ const VideoEndPoint = (function() {
    *
    */
   class VideoEndPoint extends EndPoint {
-    constructor(name, videoRemoteTag, videoLocalTag) {
+    constructor(name, videoRemoteTag, videoLocalTag, statusTag) {
       // Create a poller for this client
       super(name);
       this._videoRemoteTag = videoRemoteTag;
       this._videoLocalTag  = videoLocalTag;
+      this._statusTag      = statusTag;
       this._state          = 'IDLE';
     }
     /** @method setState
@@ -31,6 +32,7 @@ const VideoEndPoint = (function() {
     setState(newState) {
       this.log("STATE CHANGE FROM "+this._state+" TO "+newState);
       this._state = newState;
+      this._statusTag.innerHTML = newState;
       return this;
     }
     /** @method getMediaStream
@@ -303,7 +305,6 @@ const VideoEndPoint = (function() {
       if (this._state=='IDLE') {
         this.setState('RINGING');
         this._party = target;
-        this.send(target, 'CALL_REQUEST');
 
         // Start a timer in case there's no response from the remote end.
         this._ringTimer = window.setTimeout(() => {
@@ -311,6 +312,7 @@ const VideoEndPoint = (function() {
           delete this._ringTimer;
           this.callDenied(target);
         }, RING_TIMEOUT);
+        this.send(target, 'CALL_REQUEST');
       }
       else {
         alert("Can't make another call - busy");
@@ -322,6 +324,7 @@ const VideoEndPoint = (function() {
      */
     pauseCall() {
       if (this._state != 'IDLE') {
+        this.log("LOCAL MEDIA PAUSED");
         this.getMediaStream().then((media) => {
           this.log("GOT STREAM TO PAUSE");
           media.getTracks().forEach((track) => {
