@@ -9,7 +9,8 @@
       return [
         name,
         document.querySelector('#'+name+' .remoteVideo'),
-        document.querySelector('#'+name+' .localVideo')
+        document.querySelector('#'+name+' .localVideo'),
+        document.querySelector('#'+name+' .state')
       ];
     }
 
@@ -38,8 +39,13 @@
     function startCall(ev) {
       // Ask the target whether we can call
       var target = getCurrentTarget(ev).querySelector('.target').value;
-      console.log("CREATE CALL FROM EndPoint "+target);
-      endPointFromEvent(ev).startCall(target);
+      if (target.search(/\S/)>=0) {
+        console.log("CREATE CALL FROM EndPoint "+target);
+        endPointFromEvent(ev).startCall(target);
+      }
+      else {
+        alert("Call who?");
+      }
     }
     // Set up button handlers
     document.querySelectorAll('.startCall').forEach((elem) => {elem.addEventListener('click', startCall);});
