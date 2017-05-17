@@ -38,6 +38,7 @@
     }
     function startCall(ev) {
       // Ask the target whether we can call
+      // Ask the target whether we can call
       var target = getCurrentTarget(ev).querySelector('.target').value;
       if (target.search(/\S/)>=0) {
         console.log("CREATE CALL FROM EndPoint "+target);

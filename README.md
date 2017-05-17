@@ -20,6 +20,11 @@ If you would like to recap how this is done, see [this description] // Put link 
 + Attach to browser <video> tag
 
 ## 1. Local media streams
+
+1. In the **https** directory in this project, edit the *home.html* file to include a `<video>` tag in the body element.
+2. Add a `<script>` tag (type "text/javascript"), and within this tag add code to *getUserMedia* and stream it into the video tag.
+
+Example *getUserMedia* implementation; 
 ```javascript
 var promise = navigator.mediaDevices.getUserMedia({
   video: true,

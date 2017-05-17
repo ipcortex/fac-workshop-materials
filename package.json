@@ -6,6 +6,7 @@
   "scripts": {
     "https":  "node ./https/server.js",
     "video":  "node ./video/server.js",
+    "dom":    "node ./dom/server.js",
     "local":  "node ./local/server.js",
     "network":"node ./network/server.js"
   },
