@@ -22,6 +22,9 @@ const VideoEndPoint = (function() {
       this._videoLocalTag  = videoLocalTag;
       this._statusTag      = statusTag;
       this._state          = 'IDLE';
+
+      // Start the process of getting our local media and attaching to the local tag.
+      this.getMediaStream();
     }
     /** @method setState
      *  @description Single point through which state changes are made. Simple utility that allows us to easily
@@ -43,6 +46,13 @@ const VideoEndPoint = (function() {
     getMediaStream() {
       if (this._localMediaPromise==null) {
         this._localMediaPromise = navigator.mediaDevices.getUserMedia({ video: true });
+
+        // And ALWAYS attach to the local video tag when we get it.
+        this._localMediaPromise.then((mediaStream) => {
+          // Attach this stream to a video tag...
+          this._videoLocalTag.srcObject = mediaStream;
+          this._videoLocalTag.play();
+        });
       }
       return this._localMediaPromise;
     }
@@ -79,7 +89,7 @@ const VideoEndPoint = (function() {
         break;
       }
     }
-    /** @method createPeerConnection
+    /** @method getPeerConnection
      *  @description Create an RTCPeerConnection object for this EndPoint and send it to a remote EndPoint. As
      *  part of the process the method gets the media stream from the browser and attaches it to the
      *  local (.self) video tag.
@@ -87,23 +97,23 @@ const VideoEndPoint = (function() {
      *  @return {Promose} resolves when the Peer Connection has been created and the media streams
      *  have been successfully attached.
      */
-    createPeerConnection() {
-      // Create a peer connector for our end of this conversation
-      var pc = this.peerConnector = new RTCPeerConnection();
+    getPeerConnection() {
+      // We can't create the Peer Connection until we have our media...
+      if (this._peerConnectionPromise==null) {
+        this._peerConnectionPromise = this.getMediaStream().then((mediaStream) => {
+          // Create a peer connector for our end of this conversation
+          var pc = this._peerConnector = new RTCPeerConnection();
 
-      pc.onicecandidate = (e) => this.sendIceCandidate(e.candidate);
-      pc.onaddstream    = (e) => this.showRemoteStream(e.stream);
+          pc.onicecandidate = (e) => this.sendIceCandidate(e.candidate);
+          pc.onaddstream    = (e) => this.showRemoteStream(e.stream);
 
-      return this.getMediaStream().then((mediaStream) => {
-        // Create a peer connector for our end of this call
-        pc.addStream(mediaStream);
+          // Create a peer connector for our end of this call
+          pc.addStream(mediaStream);
 
-        // Attach this stream to a video tag...
-        this._videoLocalTag.srcObject = mediaStream;
-        this._videoLocalTag.play();
-
-        return Promise.resolve(pc);
-      });
+          return Promise.resolve(pc);
+        });
+      }
+      return this._peerConnectionPromise;
     }
     /** @method sendIceCandidate
      *  @description Got and ICE candidate so send to the remote end
@@ -119,47 +129,53 @@ const VideoEndPoint = (function() {
      */
     receivedIceCandidate(from, data) {
       if (this._state!='IDLE') {
-        var candidate = new RTCIceCandidate(data);
-        this.peerConnector.addIceCandidate(candidate)
-        .then(
-          ()    => this.log("Found ICE candidates",this.peerConnector),
-          (err) => this.log("ERROR: Can't Find ICE candidates",err,this.peerConnector)
-        );
+        this.getPeerConnection().then((pc) => {
+          var candidate = new RTCIceCandidate(data);
+          pc.addIceCandidate(candidate)
+          .then(
+            ()    => this.log("Found ICE candidates",pc),
+            (err) => this.log("ERROR: Can't Find ICE candidates",err,pc)
+          );
+        });
       }
     }
-    /** @method createSDPoffer
+    /** @method initiatePeerConnection
      *  @Create an SDP offer for this call. This is always created by the end that started the call.
      */
-    createSDPoffer() {
-      this.peerConnector.createOffer({
-        offerToReceiveAudio: 1,
-        offerToReceiveVideo: 1
-      }).then((offer) => {
-        // Give the offer description to our end of the connector
-        this.peerConnector.setLocalDescription(offer);
+    initiatePeerConnection() {
+      this.getPeerConnection().then((pc) => {
+        pc.createOffer({
+          offerToReceiveAudio: 1,
+          offerToReceiveVideo: 1
+        }).then((offer) => {
+          // Give the offer description to our end of the connector
+          pc.setLocalDescription(offer);
 
-        // Send the offer to the remote end of the peer connector
-        this.send(this._party, "SDP_OFFER", offer);
-      },_onCreateSessionDescriptionError);
+          // Send the offer to the remote end of the peer connector
+          this.send(this._party, "SDP_OFFER", offer);
+        },_onCreateSessionDescriptionError);
+      });
     }
     createAnswerTo(offer) {
-      this.peerConnector.setRemoteDescription(offer).then(
-        () => {
-          this.log("setRemoteDescription COMPLETE- Create answer");
-          // And generate an answering offer
-          this.peerConnector.createAnswer().then(
-            (desc) => {
-              this.log('Answer from RECEIVER {'+this._name+'}:\n' + desc.sdp);
-              this.peerConnector.setLocalDescription(desc);
+      this.getPeerConnection()
+        .then((pc) => pc.setRemoteDescription(offer))
+        .then(
+          () => {
+            this.log("setRemoteDescription COMPLETE- Create answer");
+            // And generate an answering offer
+            this._peerConnector.createAnswer().then(
+              (desc) => {
+                this.log('Answer from RECEIVER {'+this._name+'}:\n' + desc.sdp);
+                this._peerConnector.setLocalDescription(desc);
 
-              // And send this to desciption to the remote end
-              this.send(this._party, "SDP_ANSWER", desc);
-            },
-            _onCreateSessionDescriptionError
-          );
-        },
-        () => this.log("setRemoteDescription FAILED")
-      );
+                // And send this to desciption to the remote end
+                this.send(this._party, "SDP_ANSWER", desc);
+              },
+              _onCreateSessionDescriptionError
+            );
+          },
+          () => this.log("setRemoteDescription FAILED")
+        );
     }
     /** @method receivedIncomingSDPoffer
      *  @description Process an incoming SDP offer. This is ignored if we're not currently the receiving party in a
@@ -169,7 +185,7 @@ const VideoEndPoint = (function() {
     receivedIncomingSDPoffer(from, data) {
       this.log("PROCESSING INCOMING SDP OFFER...");
       if (this._state=='CALLED') {
-        this.createPeerConnection()
+        this.getPeerConnection()
         .then(() => this.createAnswerTo(data));
       }
     }
@@ -181,10 +197,12 @@ const VideoEndPoint = (function() {
       this.log("PROCESSING INCOMING SDP ANSWER...");
       if (this._state=='CALLER') {
         this.log("Accepting incoming offer...", data);
-        this.peerConnector.setRemoteDescription(data).then(
-          () => this.log("setRemoteDescription COMPLETE"),
-          () => this.log("setRemoteDescription FAILED")
-        );
+        this.getPeerConnection().then((pc) => {
+          pc.setRemoteDescription(data).then(
+            () => this.log("setRemoteDescription COMPLETE"),
+            () => this.log("setRemoteDescription FAILED")
+          );
+        });
       }
     }
     /** @method showRemoteStream
@@ -232,28 +250,8 @@ const VideoEndPoint = (function() {
         }
         this.setState('CALLER');
 
-        // And then give the transmitting stream the ones we have
-        this.createPeerConnection().then((pc) => {
-          this.log('PeerConnector (CALLER) createOffer start');
-          var offerOptions = {
-            offerToReceiveAudio: 1,
-            offerToReceiveVideo: 1
-          };
-          pc.createOffer(
-            offerOptions
-          ).then(
-            (offer) => {
-              this.log("WE HAVE AN OFFER...",offer);
-
-              // Give the offer description to our end of the connector
-              pc.setLocalDescription(offer);
-
-              // Send the offer to the remote end of the peer connector
-              this.send(from, "SDP_OFFER", offer);
-            },
-            _onCreateSessionDescriptionError
-          );
-        });
+        // Start the Peer Connection/Media swap process
+        this.initiatePeerConnection();
       }
     }
     /** @method callDenied
@@ -279,10 +277,11 @@ const VideoEndPoint = (function() {
      */
     endCall(from /*, data */) {
       if ((this._state=='CALLED' || this._state=='CALLER') && this._party==from) {
-        if (this.peerConnector!=null) {
+        if (this._peerConnector!=null) {
           // We have a Peer Connector that needs to be closed now
-          this.peerConnector.close();
-          delete this.peerConnector;
+          this._peerConnector.close();
+          delete this._peerConnector;
+          delete this._peerConnectionPromise;
         }
         this.setState('IDLE');
 
