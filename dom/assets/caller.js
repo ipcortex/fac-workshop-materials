@@ -30,17 +30,6 @@ const VideoEndPoint = (function() {
       this._statusTag.innerHTML = newState;
       return this;
     }
-    /** @method getMediaStream
-     *  @description Return a Promise that resolves to the media to be used for this user. Each EndPoint has it's own Promise. The
-     *  first time this method is invoked on an EndPoint it requests the media from the browser and stores the media promise returned.
-     *  @return {Promise} that resolves when media is available.
-     */
-    getMediaStream() {
-      if (this._localMediaPromise==null) {
-        this._localMediaPromise = navigator.mediaDevices.getUserMedia({ video: true });
-      }
-      return this._localMediaPromise;
-    }
     /** @method receive
      *  @description Entry point called by the base class when it receives a message for this object from another EndPoint.
      *  @param {String} from - the directory name of the remote EndPoint that sent this request
