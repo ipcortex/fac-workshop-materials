@@ -49,7 +49,8 @@
       localEndPoint = new VideoEndPoint(
         myname,
         document.querySelector('#videowrap .remoteVideo'),
-        document.querySelector('#videowrap .localVideo')
+        document.querySelector('#videowrap .localVideo'),
+        document.querySelector('#videowrap .state')
       );
     }
     // Set up button handlers
